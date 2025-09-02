@@ -37,6 +37,11 @@ specTransforms = transforms.Compose([
     transforms.RandomApply([transforms.RandomAffine(degrees=0, translate=(0.1,0))], p=0.3)
 ])
 
+predTransforms = transforms.Compose([
+    transforms.Lambda(lambda x: torch.from_numpy(amplitude_to_db(x).astype('float32'))),
+    transforms.Lambda(lambda x: x.unsqueeze(0) if x.ndim == 2 else x),
+])
+
 class SpectrogramDataset(Dataset):
     def __init__(self, labels, audioDir, transform=specTransforms):
         self.labels = pd.read_csv(labels, header = 0)
@@ -166,11 +171,10 @@ class ConvTest(pl.LightningModule):
         self.test_acc(output, y)
         self.log("test_acc", self.test_acc, on_epoch=True, on_step=False)
 
-    def predict_step(self, batch, batch_idx):
-        x,y = batch
+    def predict_step(self, x):
         output = self(x)
 
-        return output, y, x
+        return output, x
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr = self.learning_rate, weight_decay = 0.005)
@@ -189,14 +193,18 @@ def load_data(labelPath, dataPath):
     global train_loader, val_loader, test_loader
     ds = SpectrogramDataset(labelPath, dataPath)
 
-    train, validate, test = random_split(ds, [0.7, 0.1, 0.2])
-    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=nWorkers)
-    val_loader = DataLoader(validate, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
-    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+    train_loader = DataLoader(SpectrogramDataset(labelPath, dataPath), batch_size=batch_size, shuffle=True, num_workers=nWorkers)
+    val_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+    test_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+
+    # train, validate, test = random_split(ds, [0.7, 0.1, 0.2])
+    # train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=nWorkers)
+    # val_loader = DataLoader(validate, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+    # test_loader = DataLoader(test, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
 
     return ds, train_loader, val_loader, test_loader
 
-def config_model(nn, log_dir, chk_dir, max_epochs = 100):
+def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
     model = nn(nClasses)
 
     progress_bar_task = RichProgressBar(refresh_rate=1, leave=False,
@@ -223,14 +231,14 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100):
             filename=f'version_{version_num}'
         )
 
-    early_stopping = EarlyStopping('val_loss', patience = 10, mode = 'min')
+    early_stopping = EarlyStopping('val_loss', patience = 3, mode = 'min')
 
     # Train and test the model
     trainer = pl.Trainer(
         accelerator="auto",
         devices=1, #if torch.cuda.is_available() else None,  
         max_epochs=max_epochs,
-        check_val_every_n_epoch=3,
+        check_val_every_n_epoch=2,
         callbacks=[progress_bar_task, checkpoint_callback, early_stopping],
         logger=CSVLogger(save_dir=log_dir),
         # log_every_n_steps=1,
