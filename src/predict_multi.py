@@ -22,7 +22,7 @@ class Predictor():
         self.model = self.setup(savePath)
         self.labels = pd.read_csv(classFile, index_col=0, header=None)
         self.threshold = 0.2
-        print(self.labels)
+        # print(self.labels)
 
     def setup(self, savePath):
         model = ConvTest.load_from_checkpoint(savePath, map_location="cpu")
@@ -45,7 +45,7 @@ class Predictor():
 
     def predict(self, sample):
         data = self.process_sample(sample).unsqueeze(0)
-        print(data.shape)
+        # print(data.shape)
 
         self.model.eval()
         with torch.no_grad():
@@ -62,10 +62,10 @@ class Predictor():
 
 if __name__ == "__main__":
     version = 1
-    y1, sr = librosa.load('./data/augmented_mp3s/WombatB_4.wav', sr=48000)
-    y2, sr = librosa.load('./data/augmented_mp3s/WombatA_2.wav', sr=48000)
-    y = y1 + y2
-    # y = y1
+    y1, sr = librosa.load('./data/augmented_mp3s/BatB_4.wav', sr=48000)
+    # y2, sr = librosa.load('./data/augmented_mp3s/WombatA_2.wav', sr=48000)
+    # y = y1 + y2
+    y = y1
     # pred = Predictor('./data/chkpts/test92.pt', './data/classes.csv')
     pred = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv')
     print(pred.predict(y))

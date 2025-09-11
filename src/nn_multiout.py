@@ -109,9 +109,9 @@ class ConvTest(pl.LightningModule):
         # Tiny classifier head
         self.classifier = nn.Linear(96, num_classes)
 
-        self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
-        self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
-        self.test_acc = Accuracy(task='multiclass', num_classes=num_classes)
+        self.val_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
+        self.train_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
+        self.test_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
 
     def forward(self, x):  # x: [B, 1, H, W]
         x = self.stem(x)
