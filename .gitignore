@@ -1,3 +1,5 @@
 *.ckpt
 *.pyc
 *.safetensors
+*.overlapping
+*.spectrograms_ol
