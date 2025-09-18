@@ -1,7 +1,7 @@
 from nn_multiout import load_data, config_model, nClasses, ConvTest, predTransforms
 
 # from nn_spectrogram import setup_model, nClasses
-from preprocessData_alt import resize_audio
+from preprocessData_multi import resize_audio
 
 import torch
 # import os
@@ -9,6 +9,7 @@ import pandas as pd
 # import torch.nn as nn
 # from torch.utils.data import Dataset, DataLoader, random_split
 # import torchvision.transforms.functional as TF
+from scipy.signal import butter
 
 import numpy as np
 
@@ -22,6 +23,8 @@ class Predictor():
         self.model = self.setup(savePath)
         self.labels = pd.read_csv(classFile, index_col=0, header=None)
         self.threshold = 0.2
+
+        self.filt = butter(10, [0.05, 0.4], btype="bandpass", analog=True, output="sos")
         # print(self.labels)
 
     def setup(self, savePath):
@@ -32,14 +35,14 @@ class Predictor():
 
         return model
     
-    def audioFilter(self, spectrogram):
-        return spectrogram
+    def audioFilter(self, audio):
+        return scipy.signal.sosfilt(self.filt, audio)
         
     def process_sample(self, sampleData):
         y = resize_audio(sampleData, self.sampleLen)
-        D = np.abs(librosa.stft(y))
-        D = self.audioFilter(D)
-        D = predTransforms(D)
+        yfilt = self.audioFilter(y)
+        D = np.abs(librosa.stft(yfilt))
+        # D = predTransforms(D)
         # print(len(D), len(D[0]))
         return D
 
@@ -68,4 +71,5 @@ if __name__ == "__main__":
     y = y1
     # pred = Predictor('./data/chkpts/test92.pt', './data/classes.csv')
     pred = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv')
-    print(pred.predict(y))
+    spec = pred.processSample(y)
+    plt.plot(spec)
