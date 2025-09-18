@@ -248,7 +248,7 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
 
 
 def main():
-    ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels.csv', './data/spectrograms')
+    ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels_ol.csv', './data/spectrograms_ol')
     print(ds[0][1])
     model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=100)
 

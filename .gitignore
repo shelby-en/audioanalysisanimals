@@ -3,3 +3,4 @@
 *.safetensors
 *.overlapping
 *.spectrograms_ol
+data/overlapping/
