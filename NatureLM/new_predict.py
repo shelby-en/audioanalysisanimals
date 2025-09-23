@@ -34,7 +34,11 @@ class Predictor():
     def __init__(self, savePath, labelPath):
         self.modelSr = 16000
 
-        self.labels = pd.read_csv(labelPath, index_col=0)
+        self.labels = pd.read_csv(labelPath, index_col=0, header=None)[1].to_list()
+        print(self.labels)
+
+        print(self.prediction_to_class("frog frogmouth, kookaburra"))
+        exit()
 
         self.model = self.setup(savePath)
         print("model loaded")
@@ -48,7 +52,9 @@ class Predictor():
 
     def setup(self, savePath):
         # config = AutoConfig.from_pretrained(savePath + "config.json")
+        print("model load start")
         model = NatureLM.from_pretrained(savePath, local_files_only=True)
+        print("model eval")
         model.eval().to("cuda")
 
         return model
@@ -64,15 +70,30 @@ class Predictor():
         # D = np.abs(librosa.stft(yfilt))
         return yfilt
     
-    def prediction_to_class(self, predicitions):
-        pass
+    def prediction_to_class(self, predictions):
+        results = []
+
+        for prediction in predictions:
+            for label in self.labels:
+                llabel = label.lower()
+                lpredictions = prediction.lower().split(" ")
+                for word in lpredictions:
+                    if llabel in word:
+                        if llabel == "frog" and "frogmouth" in word:
+                            pass
+                        else:
+                            results.append(label)
+        return results
+
+
 
     def predict(self, sample, sr):
         data = self.process_sample(sample, sr)
         queries = ["What is the common name/s for the specie/s in the audio? Answer:"]
 
         print("predicting...")
-        return self.pipeline([data], queries, window_length_seconds=self.sampleLen, hop_length_seconds=self.sampleLen)
+        preds = self.pipeline([data], queries, window_length_seconds=self.sampleLen, hop_length_seconds=self.sampleLen)
+        return self.prediction_to_class(preds)
 
 if __name__ == "__main__":
     version = 1
