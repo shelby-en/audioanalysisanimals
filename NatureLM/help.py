@@ -1,18 +1,23 @@
-# import av
+import av
 import numpy as np
-# import scipy.io.wavfile as wavf
+import scipy.io.wavfile as wavf
 import time
 import threading
 import datetime
 
 from new_predict import Predictor
 
-# model = Predictor(f'../data/model/version2_1/version2_1/', '../data/classes.csv')
 
-sr = 20
+# TODO: update model path and class file path here
+model = Predictor(f'../data/model/version2_1/version2_1/', '../data/classes.csv')
+
+# TODO: fill in appropriate port
+port = 4446
+
+sr = 48000
 t = 5
 n = sr*t
-interval = 1
+interval = 2
 
 globalBuffer = np.array([0]*n)
 
@@ -38,53 +43,53 @@ class FakeIter:
         self.curr += self.frameSize
         return np.array([i for i in range(self.curr, self.curr + self.frameSize)])
 
-# def listen(port):
-#     container = av.open(f"rtp://0.0.0.0:{port}", options={
-#         "probesize": "50000000",
-#         "analyzeduration": "10000000",
-#         "protocol_whitelist": "file,udp,rtp"
-#     })
+def listen(port):
+    container = av.open(f"rtp://0.0.0.0:{port}", options={
+        "probesize": "50000000",
+        "analyzeduration": "10000000",
+        "protocol_whitelist": "file,udp,rtp"
+    })
 
-#     audio_stream = next(s for s in container.streams if s.type == 'audio')
+    audio_stream = next(s for s in container.streams if s.type == 'audio')
 
-#     return container, audio_stream
+    return container, audio_stream
 
 
-# def receive_audio_samples():
-#     container = av.open("rtp://0.0.0.0:4445", options={
-#         "probesize": "50000000",
-#         "analyzeduration": "10000000",
-#         "protocol_whitelist": "file,udp,rtp"
-#     })
+def receive_audio_samples():
+    container = av.open("rtp://0.0.0.0:4445", options={
+        "probesize": "50000000",
+        "analyzeduration": "10000000",
+        "protocol_whitelist": "file,udp,rtp"
+    })
 
-#     audio_stream = next(s for s in container.streams if s.type == 'audio')
-#     print(audio_stream)
-#     print(f"Audio stream opened: {audio_stream.rate} Hz, {audio_stream.channels} channels")
+    audio_stream = next(s for s in container.streams if s.type == 'audio')
+    print(audio_stream)
+    print(f"Audio stream opened: {audio_stream.rate} Hz, {audio_stream.channels} channels")
 
-#     count = 0
-#     frames = []
+    count = 0
+    frames = []
 
-#     try:
-#         for packet in container.demux(audio_stream):
-#             for frame in packet.decode():
-#                 samples = frame.to_ndarray()
+    try:
+        for packet in container.demux(audio_stream):
+            for frame in packet.decode():
+                samples = frame.to_ndarray()
 
-#                 if frame.format.name.endswith('planar'):
-#                     # Use only the first channel (mono) for now
-#                     raw_samples = samples[0]
-#                 else:
-#                     raw_samples = samples
+                if frame.format.name.endswith('planar'):
+                    # Use only the first channel (mono) for now
+                    raw_samples = samples[0]
+                else:
+                    raw_samples = samples
 
-#                 # Normalize to float32 [-1.0, 1.0] if needed
-#                 if frame.format.name.startswith('s16'):
-#                     float_samples = 100*raw_samples.astype(np.float32) / 32768.0
-#                 else:
-#                     float_samples = raw_samples.astype(np.float32)
+                # Normalize to float32 [-1.0, 1.0] if needed
+                if frame.format.name.startswith('s16'):
+                    float_samples = 100*raw_samples.astype(np.float32) / 32768.0
+                else:
+                    float_samples = raw_samples.astype(np.float32)
 
-#                 frames.append(frame.to_ndarray()[0])
+                frames.append(frame.to_ndarray()[0])
 
-#     except KeyboardInterrupt:
-#         wavf.write("out.wav", 48000, np.concatenate(frames))
+    except KeyboardInterrupt:
+        wavf.write("out.wav", 48000, np.concatenate(frames))
 
 def sliding_window(buffer, data, startIdx):
     idx = startIdx
@@ -95,9 +100,9 @@ def sliding_window(buffer, data, startIdx):
     return buffer, idx
 
 def main():
-    global globalBuffer, n, t, interval, timer
-    # model = Predictor(f'../data/model/version2_1/version2_1/', '../data/classes.csv')
-    # container, stream = listen(4446)
+    global globalBuffer, n, t, interval, timer, port
+    model = Predictor(f'../data/model/version2_1/version2_1/', '../data/classes.csv')
+    container, stream = listen(port)
     print("streaming")
 
     # make moving window stream hop = 1, len = 5
@@ -118,8 +123,8 @@ def main():
                 globalBuffer = buffer
                 lastTime = time.time()
 
-            # ch1 = next(container.demux(stream)).decode()[0].to_ndarray()[0]
-            ch1 = next(thing)
+            ch1 = next(container.demux(stream)).decode()[0].to_ndarray()[0]
+            # ch1 = next(thing)
 
             buffer, idx = sliding_window(buffer, ch1, idx)
             time.sleep(0.5)
