@@ -32,7 +32,7 @@ if torch.cuda.is_available():
 specTransforms = transforms.Compose([
     transforms.Lambda(lambda x: torch.from_numpy(amplitude_to_db(x))),
     transforms.Lambda(lambda x: x.unsqueeze(0) if x.ndim == 2 else x),
-    torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
+    # torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
     torchaudio.transforms.TimeMasking(time_mask_param=30),
     transforms.RandomApply([transforms.RandomAffine(degrees=0, translate=(0.1,0))], p=0.3)
 ])
@@ -252,8 +252,8 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100):
 
 
 def main():
-    ds, train_loader, val_loader, test_loader = load_data('./data/labels.csv', './data/spectrograms')
-    model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=100)
+    ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels.csv', './data/spectrograms')
+    model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=10)
 
     # import librosa
     # i = 0

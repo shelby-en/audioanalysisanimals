@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+import soundfile as sf
+import numpy as np
+import time
+import threading
+import datetime
+
+from predict_multi import Predictor
+
+PORT = 4445
+RTP_URL = f"rtp://0.0.0.0:{PORT}"
+DURATION_TIME = 5
+MODEL_TIME = 1 # in seconds
+CHANNELS = 2
+SAMPLE_RATE = 48000
+FORMAT = 's16'
+
+file_number = 0
+
+version = 1
+model = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv')
+
+def write_wav_file(filename, audio_data, sample_rate):
+    sf.write(filename, audio_data, sample_rate)
+
+def predict_sample(sample):
+    print(sample[:,0].shape)
+    predicts = model.predict(sample[:,0])
+    print(f"time: {datetime.datetime.now().strftime('%H:%M:%S')}\n, animals: {predicts}")
+    # write_wav_file(f"test{file_number}.wav", sample, SAMPLE_RATE)
+
+threads = []
+
+def use_pyav():
+    import av
+    container = av.open(RTP_URL)
+    stream = container.streams.audio[0]
+    stream.codec_context.sample_rate = SAMPLE_RATE
+    stream.codec_context.format = FORMAT
+    
+    frames = []
+    duration_time = time.time()
+    model_time = time.time()
+    timestamps = []
+    i = 0
+    # file_number = 0
+
+    try:
+
+        for packet in container.demux(stream):
+            for frame in packet.decode():
+                frames.append(frame.to_ndarray())
+                timestamps.append(time.time())
+
+            if (time.time() - duration_time) > DURATION_TIME:
+                if (time.time() - model_time) > (MODEL_TIME):
+                    print((len(frames), len(timestamps)))
+                    print(frames[0:10])
+                    
+                    model_time = time.time()
+                    audio_data = np.concatenate(frames, axis=1).T
+
+                    for i in range(len(timestamps)):
+                        if (time.time() - timestamps[i]) <= DURATION_TIME:
+                            break
+                    timestamps = timestamps[i:]
+                    frames = frames[i:]
+
+                    # write_wav_file(f'recordings/file{file_number}.wav', audio_data, SAMPLE_RATE)
+                    t = threading.Thread(target=predict_sample, args=(audio_data,))
+                    
+                    t.start()
+                    threads.append(t)
+
+                    global file_number
+                    file_number += 1
+
+    except KeyboardInterrupt:
+        for thread in threads:
+            thread.join()
+        print("Interrupted by user.")
+
+if __name__ == "__main__":
+    print("Starting audio reception...")
+    use_pyav()
+    print("Done.")

@@ -24,8 +24,8 @@ def makeAudios(audio, name, time=5, sr=48000, overlap = 5):
         count = 1
         while i+time*sr < len(audio):
             audios.append(audio[i:i+time*sr])
-            # sf.write(name + f'_{count}_ol.wav', audio[i:i+time*sr], sr)
-            sf.write(name + f'.wav', audio[i:i+time*sr], sr)
+            sf.write(name + f'_{count}.wav', audio[i:i+time*sr], sr)
+            # sf.write(name + f'.wav', audio[i:i+time*sr], sr)
             i += overlap*sr
             count += 1
 
@@ -35,8 +35,8 @@ def makeAudios(audio, name, time=5, sr=48000, overlap = 5):
         
 
 if __name__ == "__main__":
-    folder = "./data/augmented_mp3s/"
-    outPath = "./data/overlapping/"
+    folder = "./data/new_wavs_48000/"
+    outPath = "./data/sample_5s/"
 
     files = []
     for file in os.listdir(folder):
@@ -45,11 +45,12 @@ if __name__ == "__main__":
     
     for i in range(len(files)):
         y1, sr = librosa.load(folder + '/' + files[i], sr=48000)
-        for j in range(i+1, len(files)):
-            y2, sr = librosa.load(folder + '/' + files[j], sr=48000)
-            c1 = files[i].split('_')[0][:-1]
-            c2 = files[j].split('_')[0][:-1]
-            if c1 == c2:
-                continue
-            # print(c1, c2)
-            makeAudios(y1 + y2, outPath + f'{i}_{j}_{classes[c1]}_{classes[c2]}')
+        name = files[i][:-4]
+        # for j in range(i+1, len(files)):
+        #     y2, sr = librosa.load(folder + '/' + files[j], sr=48000)
+        #     c1 = files[i].split('_')[0][:-1]
+        #     c2 = files[j].split('_')[0][:-1]
+        #     # if c1 == c2:
+        #     #     continue
+        #     # print(c1, c2)
+        makeAudios(y1, outPath + name)

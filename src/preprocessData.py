@@ -16,8 +16,8 @@ def resize_audio(audio, time=10):
     return audio
 
 if __name__ == "__main__":
-    folder = "./data/augmented_mp3s/"
-    featherPath = "./data/spectrograms/"
+    folder = "./data/mixed_wavs/"
+    featherPath = "./data/more_spectrograms/"
     # print(os.getcwd())
     files = []
     for file in os.listdir(folder):
@@ -25,8 +25,6 @@ if __name__ == "__main__":
             files.append(file)
 
     # print(files)
-
-
     with open('./data/labels.csv', 'w') as labelFile:
         label = -1
         idx = 1
@@ -45,5 +43,5 @@ if __name__ == "__main__":
                 idx = 1
                 prevLabel = file.split("_")[0]
             
-            labelFile.write(f'{idx},{label},{prevLabel}\n')
+            # labelFile.write(f'{idx},{label},{prevLabel}\n')
             idx += 1

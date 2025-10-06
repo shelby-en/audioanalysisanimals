@@ -8,7 +8,7 @@ import lightning.pytorch as pl
 from torchvision import transforms, models
 import torchaudio
 
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, random_split, SubsetRandomSampler
 import matplotlib.pyplot as plt 
 import torch.nn as nn 
 import torch.optim as optim 
@@ -21,6 +21,8 @@ from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTh
 
 import torch
 
+import librosa
+
 nClasses = 14
 batch_size = 10
 
@@ -29,10 +31,14 @@ nWorkers = 0 if torch.cuda.is_available() else 0
 if torch.cuda.is_available():
     torch.set_float32_matmul_precision('high')
 
+torch.cuda.empty_cache()
+# print(torch.cuda.memory_summary(device=None, abbreviated=False))
+    
+
 specTransforms = transforms.Compose([
     transforms.Lambda(lambda x: torch.from_numpy(amplitude_to_db(x))),
     transforms.Lambda(lambda x: x.unsqueeze(0) if x.ndim == 2 else x),
-    torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
+    # torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
     torchaudio.transforms.TimeMasking(time_mask_param=30),
     transforms.RandomApply([transforms.RandomAffine(degrees=0, translate=(0.1,0))], p=0.3)
 ])
@@ -58,9 +64,15 @@ class SpectrogramDataset(Dataset):
         sample_path = os.path.join(self.audioDir, str(self.labels.iloc[idx][0]) + '.npy')
         s = torch.from_numpy(np.load(sample_path).astype('float32'))
         label = self.labels.iloc[idx][1:]
+        # librosa.display.specshow(s.numpy())
+        # plt.show()
         # s = (s - torch.mean(s)) / (torch.std(s) + 1e-6)  # standardization
         if self.transform:
             s = self.transform(s)
+
+        # s1 = s.cpu().detach().numpy().squeeze(0)
+        # librosa.display.specshow(s1)
+        # plt.show()
 
         return s, torch.tensor(label, dtype=torch.float32)
 
@@ -79,7 +91,7 @@ class SepConv(nn.Module):
         return self.act(x)
     
 class ConvTest(pl.LightningModule):
-    def __init__(self, num_classes = nClasses, learning_rate = 0.001, ):
+    def __init__(self, num_classes = nClasses, learning_rate = 0.001,):
         super().__init__()
         self.save_hyperparameters()
 
@@ -87,41 +99,69 @@ class ConvTest(pl.LightningModule):
         self.loss_fun = nn.BCEWithLogitsLoss()
         self.num_classes = num_classes
 
+        # input [B, 1, H, W]
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
 
-        # Feature extractor (very small):
-        # Input: [B, 1, H, W]
-        self.stem = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=3),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            nn.Conv2d(in_channels=16, out_channels=4, kernel_size=3),
+            # nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
         )
-        # Downsample a bit with stride=2 to reduce compute; keep channels modest
-        self.block1 = SepConv(16, 32, stride=2)   # [B, 32, H/2,  W/2]
-        self.block2 = SepConv(32, 64, stride=2)   # [B, 64, H/4,  W/4]
-        self.block3 = SepConv(64, 96, stride=2)   # [B, 96, H/8,  W/8]
 
-        # Optional regularization
-        self.dropout = nn.Dropout(p=0.2)
+        self.lin = nn.Sequential(
+            nn.Linear(28000, 196),
+            nn.ReLU(),
+            nn.Linear(196, num_classes)
+        )
 
-        # Global average pooling -> [B, C, 1, 1] -> [B, C]
-        self.gap = nn.AdaptiveAvgPool2d((1, 1))
+        self.sig = nn.Sigmoid()
 
-        # Tiny classifier head
-        self.classifier = nn.Linear(96, num_classes)
+        # # Feature extractor (very small):
+        # # Input: [B, 1, H, W]
+        # self.stem = nn.Sequential(
+        #     nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1, bias=False),
+        #     nn.BatchNorm2d(16),
+        #     nn.ReLU(inplace=True),
+        # )
+        # # Downsample a bit with stride=2 to reduce compute; keep channels modest
+        # self.block1 = SepConv(16, 32, stride=2)   # [B, 32, H/2,  W/2]
+        # self.block2 = SepConv(32, 64, stride=2)   # [B, 64, H/4,  W/4]
+        # self.block3 = SepConv(64, 96, stride=2)   # [B, 96, H/8,  W/8]
+
+        # # Optional regularization
+        # self.dropout = nn.Dropout(p=0.2)
+
+        # # Global average pooling -> [B, C, 1, 1] -> [B, C]
+        # self.gap = nn.AdaptiveAvgPool2d((1, 1))
+
+        # # Tiny classifier head
+        # self.classifier = nn.Linear(96, num_classes)
 
         self.val_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
         self.train_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
         self.test_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
 
     def forward(self, x):  # x: [B, 1, H, W]
-        x = self.stem(x)
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = self.dropout(x)
-        x = self.gap(x)                # [B, 96, 1, 1]
-        x = x.view(x.size(0), -1)      # [B, 96]
-        logits = self.classifier(x)    # [B, num_classes]
+        # x = self.stem(x)
+        # x = self.block1(x)
+        # x = self.block2(x)
+        # x = self.block3(x)
+        # x = self.dropout(x)
+        # x = self.gap(x)                # [B, 96, 1, 1]
+        # x = x.view(x.size(0), -1)      # [B, 96]
+        # logits = self.classifier(x)    # [B, num_classes]
+       
+        x = self.conv(x)
+        # x = x.reshape(x.size(0), -1)
+        x = x.view(x.size(0), -1)
+        logits = self.lin(x)
+
         return logits
     
     def training_step(self, batch, batch_idx):
@@ -171,8 +211,10 @@ class ConvTest(pl.LightningModule):
         self.test_acc(output, y)
         self.log("test_acc", self.test_acc, on_epoch=True, on_step=False)
 
-    def predict_step(self, x):
+    def predict_step(self, x, batch_idx = 0):
+        x,y = x
         output = self(x)
+        output = self.sig(output)
 
         return output, x
 
@@ -189,20 +231,45 @@ class ConvTest(pl.LightningModule):
     def test_dataloader(self):
         return test_loader
 
-def load_data(labelPath, dataPath):
+def load_data(labelPath, dataPath, props = [0.7, 0.2, 0.1]):
     global train_loader, val_loader, test_loader
-    ds = SpectrogramDataset(labelPath, dataPath)
+    train_ds = SpectrogramDataset(labelPath, dataPath, transform=specTransforms)
+    val_ds = SpectrogramDataset(labelPath, dataPath, transform=predTransforms)
 
-    train_loader = DataLoader(SpectrogramDataset(labelPath, dataPath), batch_size=batch_size, shuffle=True, num_workers=nWorkers)
-    val_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
-    test_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+    n = len(train_ds)
+    idxs = list(range(n))
+    np.random.shuffle(idxs)
+    split1 = int(np.floor((props[1] + props[2])*n))
+    split2 = int(np.floor(props[2]*n))
+
+    train_idx, val_idx, test_idx = idxs[split1:], idxs[split2:split1], idxs[:split2]
+
+    # n = len(train_ds)
+    # idxs = list(range(n))
+    # np.random.shuffle(idxs)
+    # split1 = int(np.floor(0.99*n))
+    # split2 = int(np.floor(0.988*n))
+
+    # train_idx, val_idx, test_idx = idxs[split1:], idxs[split2:split1], idxs[split2:split1]
+
+    train_sampler = SubsetRandomSampler(train_idx)
+    val_sampler = SubsetRandomSampler(val_idx)
+    test_sampler = SubsetRandomSampler(test_idx)
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=train_sampler, num_workers=nWorkers)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, sampler=val_sampler, num_workers=nWorkers)
+    test_loader = DataLoader(val_ds, batch_size=batch_size, sampler=test_sampler, num_workers=nWorkers)
+
+    # train_loader = DataLoader(SpectrogramDataset(labelPath, dataPath), batch_size=batch_size, shuffle=True, num_workers=nWorkers)
+    # val_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
+    # test_loader = DataLoader(SpectrogramDataset(labelPath, dataPath, transform=predTransforms), batch_size=batch_size, shuffle=False, num_workers=nWorkers)
 
     # train, validate, test = random_split(ds, [0.7, 0.1, 0.2])
     # train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=nWorkers)
     # val_loader = DataLoader(validate, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
     # test_loader = DataLoader(test, batch_size=batch_size, shuffle=False, num_workers=nWorkers)
 
-    return ds, train_loader, val_loader, test_loader
+    return val_ds, train_loader, val_loader, test_loader
 
 def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
     model = nn(nClasses)
@@ -228,27 +295,30 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
             save_top_k=1,        # save the best model
             mode="min",
             every_n_epochs=1,
+            save_weights_only=True,
             filename=f'version_{version_num}'
         )
 
-    early_stopping = EarlyStopping('val_loss', patience = 3, mode = 'min')
+    early_stopping = EarlyStopping('val_loss', patience = 5, mode = 'min')
 
     # Train and test the model
     trainer = pl.Trainer(
         accelerator="auto",
         devices=1, #if torch.cuda.is_available() else None,  
         max_epochs=max_epochs,
-        check_val_every_n_epoch=2,
+        check_val_every_n_epoch=1,
         callbacks=[progress_bar_task, checkpoint_callback, early_stopping],
         logger=CSVLogger(save_dir=log_dir),
-        # log_every_n_steps=1,
+        log_every_n_steps=1,
     )
 
     return model, trainer, version_num
 
 
 def main():
-    ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels_ol.csv', './data/spectrograms_ol')
+    # ds, train_loader, val_loader, test_loader = load_data('./data/mixed_labels.csv', './data/mixed_set')
+    ds, train_loader, val_loader, test_loader = load_data('./data/more_labels.csv', './data/more_multi')
+    # ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels.csv', './data/spectrograms')
     print(ds[0][1])
     model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=100)
 
@@ -271,6 +341,7 @@ def main():
     trainer.fit(model, train_loader, val_loader)
     model.eval()
     trainer.test(model, test_loader)
+
 
 if __name__ == "__main__":
     main()

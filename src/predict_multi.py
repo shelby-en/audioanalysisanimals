@@ -9,12 +9,16 @@ import pandas as pd
 # import torch.nn as nn
 # from torch.utils.data import Dataset, DataLoader, random_split
 # import torchvision.transforms.functional as TF
-from scipy.signal import butter
+from scipy.signal import butter, sosfilt
+
+import sklearn.metrics as skm
 
 import numpy as np
 
 import librosa
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+
+PI = 3.14159265358
 
 class Predictor():
     sampleLen = 5
@@ -22,9 +26,9 @@ class Predictor():
     def __init__(self, savePath, classFile):
         self.model = self.setup(savePath)
         self.labels = pd.read_csv(classFile, index_col=0, header=None)
-        self.threshold = 0.2
+        self.threshold = 0.5
 
-        self.filt = butter(10, [0.05, 0.4], btype="bandpass", analog=True, output="sos")
+        self.filt = butter(15, [0.04, 0.45], btype="bandpass", analog=False, output="sos")
         # print(self.labels)
 
     def setup(self, savePath):
@@ -36,25 +40,34 @@ class Predictor():
         return model
     
     def audioFilter(self, audio):
-        return scipy.signal.sosfilt(self.filt, audio)
+        return sosfilt(self.filt, audio)
         
     def process_sample(self, sampleData):
         y = resize_audio(sampleData, self.sampleLen)
         yfilt = self.audioFilter(y)
-        D = np.abs(librosa.stft(yfilt))
-        # D = predTransforms(D)
+        # D = np.abs(librosa.stft(yfilt))
+        D = np.abs(librosa.stft(y))
+        # librosa.display.specshow(librosa.amplitude_to_db(D))
+        # plt.show()
+        D = predTransforms(D)
         # print(len(D), len(D[0]))
         return D
 
-    def predict(self, sample):
-        data = self.process_sample(sample).unsqueeze(0)
+    def predict(self, sample, audio=True):
+        if audio:
+            data = self.process_sample(sample).unsqueeze(0)
+        else:
+            data = predTransforms(sample).unsqueeze(0)
         # print(data.shape)
+
+        data = (data, 0)
 
         self.model.eval()
         with torch.no_grad():
             out, x = self.model.predict_step(data)
-        out = torch.softmax(out, 1)
+        # out = torch.softmax(out, 1)
         out = out.numpy().squeeze()
+        # print(out)
 
         labels = []
         for i in range(len(out)):
@@ -64,12 +77,20 @@ class Predictor():
         return labels
 
 if __name__ == "__main__":
-    version = 1
-    y1, sr = librosa.load('./data/augmented_mp3s/BatB_4.wav', sr=48000)
-    # y2, sr = librosa.load('./data/augmented_mp3s/WombatA_2.wav', sr=48000)
-    # y = y1 + y2
-    y = y1
-    # pred = Predictor('./data/chkpts/test92.pt', './data/classes.csv')
+    version = 23
     pred = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv')
-    spec = pred.processSample(y)
-    plt.plot(spec)
+    # print("start predicting..")
+    # nums = [338,340,341]
+    # for i in nums:
+    #     y1, sr = librosa.load('new.mp3', sr=48000)
+    #     # D = np.load(f"./data/mixed_set/{i}.npy")
+
+    #     # print(f"{i}: {pred.predict(D, audio=False)}")
+    #     print(pred.predict(y1))
+
+    y1, sr = librosa.load('new.mp3', sr=48000)
+    offset = 0
+    while offset + 48000 * 5 < len(y1):
+        print(pred.predict(y1[offset:]))
+        offset += 48000 * 1
+

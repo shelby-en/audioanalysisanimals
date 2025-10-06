@@ -8,6 +8,8 @@ import pyarrow as pa
 import pandas as pd
 import csv
 
+from scipy.signal import butter, sosfilt
+
 def resize_audio(audio, time=10):
     numSamples = 48000*time
     audio = audio[:numSamples]
@@ -27,10 +29,12 @@ if __name__ == "__main__":
     # print(files)
     header = ["fileName","Bat","Cockatoo","Crocodile","Dingo","Duck","Frog","FrogmouthTawny","Koala","Kookaburra","Magpie","Platypus","Possum","Snake","Wombat"]
     df = pd.DataFrame(columns = header)
+    filt = butter(15, [0.04, 0.45], btype="bandpass", analog=False, output="sos")
 
     for i, file in enumerate(files):
         y, sr = librosa.load(folder + '/' + file, sr=48000)
         y = resize_audio(y, 5)
+        # y = sosfilt(filt, y)
         
         #discard complex part for now
         D = np.abs(librosa.stft(y))
