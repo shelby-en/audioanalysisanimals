@@ -4,3 +4,4 @@
 *.overlapping
 *.spectrograms_ol
 data/overlapping/
+**data
