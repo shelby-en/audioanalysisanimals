@@ -8,3 +8,4 @@ data/*
 
 !data/version_35.ckpt
 !data/classes.csv
+!data/noise_files
