@@ -22,7 +22,7 @@ file_number = 0
 
 version = 35
 filt = True
-model = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv', filt=filt)
+model = Predictor(f'./data/version_{version}.ckpt', './data/classes.csv', filt=filt)
 
 def write_wav_file(filename, audio_data, sample_rate):
     sf.write(filename, audio_data, sample_rate)
