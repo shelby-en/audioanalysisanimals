@@ -5,6 +5,7 @@
 *.spectrograms_ol
 data/overlapping/
 data/*
+myenv
 
 !data/version_35.ckpt
 !data/classes.csv

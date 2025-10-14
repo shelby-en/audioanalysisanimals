@@ -1,0 +1,10 @@
+soundfile
+pandas
+matplotlib
+librosa
+lightning
+torchvision
+torchaudio
+noisereduce
+pydub
+av
