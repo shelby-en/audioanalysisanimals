@@ -4,7 +4,7 @@
 *.overlapping
 *.spectrograms_ol
 data/overlapping/
-data
+data/*
 
-!data/chkpts/lightning/chks/verison_35.ckpt
+!data/version_35.ckpt
 !data/classes.csv
