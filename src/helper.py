@@ -68,19 +68,41 @@ import scipy.io.wavfile as wavf
 
 # np.load("./data/mixed_set/1.npy")
 
-folder = "./data/augmented_mp3s/"
-outFolder = "./data/mixed_wavs/"
+# folder = "./data/sample_5s/"
+# outFolder = "./data/mixed_wavs/"
 
-increment = 100
+# increment = 0
 
-files = []
-for file in os.listdir(folder):
-    if file.endswith(".wav"):
-        files.append(file)
+# files = []
+# for file in os.listdir(folder):
+#     if file.endswith(".wav"):
+#         files.append(file)
 
-for file in files:
-    y, sr = librosa.load(folder + file)
-    name, number = file.split('_')
-    print(number[:-4])
-    wavf.write(outFolder+f"{name}_{int(number[:-4]) + increment}.wav", 48000, y)
+# for file in files:
+#     y, sr = librosa.load(folder + file, sr=48000)
+#     name, number = file.split('_')
+#     print(number[:-4])
+#     wavf.write(outFolder+f"{name}_{int(number[:-4]) + increment}.wav", 48000, y)
+
+# y1, sr = librosa.load("./data/new_wavs_48000/SnakeB.wav")
+# y2, sr = librosa.load("./data/new_wavs_48000/BatB.wav")
+
+# wavf.write("test.wav", sr, np.pad(y1, (0,1455300-617400)) + y2)
+
+# folder = "./data/augmented_mp3s/"
+# files = []
+# for file in os.listdir(folder):
+#     if file.endswith(".wav"):
+#         files.append(file[:-4])
+
+# df = pd.DataFrame(files)
+# df.to_csv("./data/noise_labels.csv", index=None)
+
+# folder = "./data/noise_files/"
+# files = []
+# for file in os.listdir(folder):
+#     if file.endswith(".wav"):
+#         y1, sr = librosa.load(folder + file, sr=48000)
+#         print(sr)
+#         wavf.write(folder + file, sr, y1)
 

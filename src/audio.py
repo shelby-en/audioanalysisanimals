@@ -7,8 +7,11 @@ import datetime
 
 from predict_multi import Predictor
 
-PORT = 4445
+# ffmpeg -ar 48000 -codec:a pcm_s16le -f dshow -i audio="Microphone Array (Realtek(R) Audio)" -codec:a mp2 -f rtp rtp://127.0.0.1:4444
+
+PORT = 4444
 RTP_URL = f"rtp://0.0.0.0:{PORT}"
+RTP_URL = f"rtp://127.0.0.1:{PORT}"
 DURATION_TIME = 5
 MODEL_TIME = 1 # in seconds
 CHANNELS = 2
@@ -17,14 +20,15 @@ FORMAT = 's16'
 
 file_number = 0
 
-version = 1
-model = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv')
+version = 35
+filt = True
+model = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv', filt=filt)
 
 def write_wav_file(filename, audio_data, sample_rate):
     sf.write(filename, audio_data, sample_rate)
 
 def predict_sample(sample):
-    print(sample[:,0].shape)
+    # print(sample[:,0].shape)
     predicts = model.predict(sample[:,0])
     print(f"time: {datetime.datetime.now().strftime('%H:%M:%S')}\n, animals: {predicts}")
     # write_wav_file(f"test{file_number}.wav", sample, SAMPLE_RATE)
@@ -54,8 +58,8 @@ def use_pyav():
 
             if (time.time() - duration_time) > DURATION_TIME:
                 if (time.time() - model_time) > (MODEL_TIME):
-                    print((len(frames), len(timestamps)))
-                    print(frames[0:10])
+                    # print((len(frames), len(timestamps)))
+                    # print(frames[0:10])
                     
                     model_time = time.time()
                     audio_data = np.concatenate(frames, axis=1).T

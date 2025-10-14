@@ -37,6 +37,7 @@ torch.cuda.empty_cache()
 
 specTransforms = transforms.Compose([
     transforms.Lambda(lambda x: torch.from_numpy(amplitude_to_db(x))),
+    # transforms.Lambda(lambda x: torch.from_numpy(x)),
     transforms.Lambda(lambda x: x.unsqueeze(0) if x.ndim == 2 else x),
     # torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
     torchaudio.transforms.TimeMasking(time_mask_param=30),
@@ -61,7 +62,7 @@ class SpectrogramDataset(Dataset):
         # print(self.labels.iloc[idx])
         # print(self.labels.iloc[idx][2] + '_' + str(self.labels.iloc[idx][1]) + '.npy')
         # sample_path = os.path.join(self.audioDir, self.labels.iloc[idx][2] + '_' + str(self.labels.iloc[idx][0]) + '.npy')
-        sample_path = os.path.join(self.audioDir, str(self.labels.iloc[idx][0]) + '.npy')
+        sample_path = os.path.join(self.audioDir, str(int(self.labels.iloc[idx][0])) + '.npy')
         s = torch.from_numpy(np.load(sample_path).astype('float32'))
         label = self.labels.iloc[idx][1:]
         # librosa.display.specshow(s.numpy())
@@ -143,9 +144,9 @@ class ConvTest(pl.LightningModule):
         # # Tiny classifier head
         # self.classifier = nn.Linear(96, num_classes)
 
-        self.val_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
-        self.train_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
-        self.test_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.2)
+        self.val_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.7)
+        self.train_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.7)
+        self.test_acc = F1Score(task='multilabel', num_classes=nClasses, num_labels=nClasses, threshold=0.7)
 
     def forward(self, x):  # x: [B, 1, H, W]
         # x = self.stem(x)
@@ -317,9 +318,10 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
 
 def main():
     # ds, train_loader, val_loader, test_loader = load_data('./data/mixed_labels.csv', './data/mixed_set')
-    ds, train_loader, val_loader, test_loader = load_data('./data/more_labels.csv', './data/more_multi')
+    # ds, train_loader, val_loader, test_loader = load_data('./data/more_labels.csv', './data/more_multi')
+    ds, train_loader, val_loader, test_loader = load_data('./data/filt_ol_labels.csv', './data/filt_ol')
     # ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels.csv', './data/spectrograms')
-    print(ds[0][1])
+    print(ds[0][0])
     model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=100)
 
     # import librosa
