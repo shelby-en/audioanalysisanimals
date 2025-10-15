@@ -23,6 +23,22 @@ import matplotlib.pyplot as plt
 from scipy.io import wavfile
 
 PI = 3.14159265358
+INDENT = {
+    "Bat": 11,
+    "Cockatoo": 6,
+    "Crocodile": 5,
+    "Dingo": 9,
+    "Duck": 10,
+    "Frog": 10,
+    "FrogmouthTawny": 0,
+    "Koala": 9,
+    "Kookaburra": 4,
+    "Magpie": 8,
+    "Platypus": 6,
+    "Possum": 8,
+    "Snake": 9,
+    "Wombat": 8,
+}
 
 def resize_audio(audio, time=10):
     numSamples = 48000*time
@@ -132,9 +148,13 @@ class Predictor():
 
         labels = []
         for i in range(len(out)):
-            if out[i] > self.threshold:
-                labels.append(self.labels.iloc[i][1])
-            
+            # if out[i] > self.threshold:
+            label = self.labels.iloc[i][1]
+            confidence = int(round(float(out[i]), 2)*100)
+            prediction = [f"{INDENT[label] * " "}{label.upper() if (out[i] > self.threshold) else label.lower()}: {" " if confidence < 10 else ""}", confidence, f"% [{(confidence//4) * "="}{(25 - (confidence//4)) * " "}] {"<---" if (out[i] > self.threshold) else ""}"]
+            labels.append(prediction)
+        labels = sorted(labels, key=lambda sublist: sublist[1])
+        labels.reverse()
         return labels
 
 if __name__ == "__main__":

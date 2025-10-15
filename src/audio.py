@@ -52,7 +52,11 @@ class AudioClassificationNode(Node):
 
     def publish_predicts(self) -> None:
         string = String()
-        string.data = ', '.join(self.predicts)
+        for i in range(len(self.predicts)):
+            self.predicts[i][1] = str(self.predicts[i][1])
+            self.predicts[i] = "".join(self.predicts[i])
+        string.data = '\n'.join(self.predicts)
+        print(string.data)
         self._predicts_publisher.publish(string)
 
     def write_wav_file(self, filename, audio_data, sample_rate):
@@ -61,7 +65,7 @@ class AudioClassificationNode(Node):
     def predict_sample(self, sample):
         # print(sample[:,0].shape)
         self.predicts = model.predict(sample[:,0])
-        print(f"time: {datetime.datetime.now().strftime('%H:%M:%S')}\n, animals: {self.predicts}")
+        print(f"time: {datetime.datetime.now().strftime('%H:%M:%S')}")
         self.publish_predicts()
         # self.write_wav_file(f"test{self._file_number}.wav", sample, SAMPLE_RATE)
 
