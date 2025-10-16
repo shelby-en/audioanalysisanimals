@@ -319,7 +319,7 @@ def config_model(nn, log_dir, chk_dir, max_epochs = 100, nClasses = nClasses):
 def main():
     # ds, train_loader, val_loader, test_loader = load_data('./data/mixed_labels.csv', './data/mixed_set')
     # ds, train_loader, val_loader, test_loader = load_data('./data/more_labels.csv', './data/more_multi')
-    ds, train_loader, val_loader, test_loader = load_data('./data/filt_ol_labels.csv', './data/filt_ol')
+    ds, train_loader, val_loader, test_loader = load_data('./data/other_mic_labels.csv', './data/other_mic_ol')
     # ds, train_loader, val_loader, test_loader = load_data('./data/multi_labels.csv', './data/spectrograms')
     print(ds[0][0])
     model, trainer, version_num = config_model(ConvTest, './data/chkpts/lightning/logs/', './data/chkpts/lightning/chks/',max_epochs=100)

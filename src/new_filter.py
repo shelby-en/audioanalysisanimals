@@ -42,7 +42,7 @@ def filter(y, noisePath, outpath = "", rate = None, audio = False):
         return norm.get_array_of_samples()
 
 if __name__ == "__main__":
-    rate, y1 = wavfile.read("./data/sample_5s/WombatB_4.wav")
+    # rate, y1 = wavfile.read("./data/sample_5s/WombatB_4.wav")
     # y1, rate = librosa.load("./data/new_wavs_48000/Platypu/sA.wav")
 
     # wavfile.write("temp1.wav", rate1, data1)
@@ -51,31 +51,32 @@ if __name__ == "__main__":
 
     # print(data.dtype)
     # print(max(data), min(data))
-    test = np.array(filter(y1, "./data/noise_files/", rate=rate, audio=True))
+    # test = np.array(filter(y1, "./data/noise_files/", rate=rate, audio=True))
     # print(np.array(filter(data2, "./data/noise_files/", rate=rate2, audio=True)))
-    wavfile.write("test.wav", rate, test)
+    # wavfile.write("test.wav", rate, test)
 
 
     # # og_folder = "./data/original_mp3s/"
-    # dataFolder = "./data/mixed_wavs/"
+    dataFolder = "./data/other_mic_wavs/"
     # # for file in os.listdir(og_folder):
     # #     data, rate = librosa.load(og_folder + file)
     # #     wavfile.write(dataFolder + file[:-4] + ".wav", rate, data)
     
-    # dataFiles = []
-    # for file in os.listdir(dataFolder):
-    #     if file.endswith(".wav"):
-    #         dataFiles.append(file)
+    dataFiles = []
+    for file in os.listdir(dataFolder):
+        if file.endswith(".wav"):
+            dataFiles.append(file)
 
     
 
-    # noiseFolder = "./data/noise_files/"
+    noiseFolder = "./data/noise_files/"
     # noiseFiles = []
     # for file in os.listdir(noiseFolder):
     #     if file.endswith(".wav"):
     #         noiseFiles.append(file)
 
-    # outPath = "./data/filtered_wavs/"
+    outPath = "./data/other_mic_filt/"
 
-    # for sound in dataFiles:
-    #     filter(dataFolder + sound, noiseFolder, outPath + sound)
+    for sound in dataFiles:
+        print(sound)
+        filter(dataFolder + sound, noiseFolder, outPath + sound)

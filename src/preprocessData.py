@@ -16,8 +16,8 @@ def resize_audio(audio, time=10):
     return audio
 
 if __name__ == "__main__":
-    folder = "./data/filtered_wavs/"
-    featherPath = "./data/filtered_spectrograms/"
+    folder = "./data/other_mic_wavs/"
+    featherPath = "./data/other_mic_spectrograms/"
     # print(os.getcwd())
     files = []
     for file in os.listdir(folder):

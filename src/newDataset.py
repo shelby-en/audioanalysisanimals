@@ -17,10 +17,13 @@ def resize_audio(audio, time=10):
 if __name__ == "__main__":
     # folder = "./data/more_spectrograms/"
     # outPath = "./data/more_multi/"
-    # labelPath = "./data/more_labels.csv"
-    folder = "./data/filtered_spectrograms/"
-    outPath = "./data/filt_ol/"
-    labelPath = "./data/filt_ol_labels.csv"
+    # # labelPath = "./data/more_labels.csv"
+    # folder = "./data/filtered_spectrograms/"
+    # outPath = "./data/filt_ol/"
+    # labelPath = "./data/filt_ol_labels.csv"
+    folder = "./data/other_mic_spectrograms/"
+    outPath = "./data/other_mic_ol/"
+    labelPath = "./data/other_mic_labels.csv"
 
     files = []
     for file in os.listdir(folder):
@@ -29,7 +32,7 @@ if __name__ == "__main__":
 
     print(len(files))
 
-    props = [1, 0.2, 0.0005]
+    props = [1, 0.5, 0.00005]
 
     # noise = ["water","bugs","other_birds","mid_noise","low_noise"]
     noise = []

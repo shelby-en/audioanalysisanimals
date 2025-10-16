@@ -27,6 +27,7 @@ FORMAT = 's16'
 
 version = 35
 filt = True
+convertChannels = False
 model = Predictor(f'./data/version_{version}.ckpt', './data/classes.csv', filt=filt)
 
 class AudioClassificationNode(Node):
@@ -62,9 +63,14 @@ class AudioClassificationNode(Node):
     def write_wav_file(self, filename, audio_data, sample_rate):
         sf.write(filename, audio_data, sample_rate)
 
+    def stereo_to_mono(self, sample):
+        return np.mean(sample, axis=1)
+
     def predict_sample(self, sample):
         # print(sample[:,0].shape)
-        self.predicts = model.predict(sample[:,0])
+        sample = self.stereo_to_mono(sample) if convertChannels else sample[:,0]
+        # self.predicts = model.predict(sample[:,0])
+        self.predicts = model.predict(sample)
         print(f"time: {datetime.datetime.now().strftime('%H:%M:%S')}")
         self.publish_predicts()
         # self.write_wav_file(f"test{self._file_number}.wav", sample, SAMPLE_RATE)
