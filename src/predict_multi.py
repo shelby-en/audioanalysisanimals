@@ -144,14 +144,14 @@ class Predictor():
             out, x = self.model.predict_step(data)
         # out = torch.softmax(out, 1)
         out = out.numpy().squeeze()
-        print(out)
+        print([1 if num > 0.95 else 0 for num in out])
 
         labels = []
         for i in range(len(out)):
             # if out[i] > self.threshold:
             label = self.labels.iloc[i][1]
             confidence = int(round(float(out[i]), 2)*100)
-            prediction = [f"{INDENT[label] * " "}{label.upper() if (out[i] > self.threshold) else label.lower()}: {" " if confidence < 10 else ""}", confidence, f"% [{(confidence//4) * "="}{(25 - (confidence//4)) * " "}] {"<---" if (out[i] > self.threshold) else ""}"]
+            prediction = [f"{INDENT[label] * ' '}{label.upper() if (out[i] > self.threshold) else label.lower()}: {' ' if confidence < 10 else ''}", confidence, f"% [{(confidence//4) * '='}{(25 - (confidence//4)) * ' '}] {'<---' if (out[i] > self.threshold) else ''}"]
             labels.append(prediction)
         labels = sorted(labels, key=lambda sublist: sublist[1])
         labels.reverse()

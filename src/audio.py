@@ -64,7 +64,7 @@ class AudioClassificationNode(Node):
         sf.write(filename, audio_data, sample_rate)
 
     def stereo_to_mono(self, sample):
-        return np.mean(sample, axis=1)
+        return np.mean(sample, axis=1, dtype=sample.dtype)
 
     def predict_sample(self, sample):
         # print(sample[:,0].shape)
