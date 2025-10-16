@@ -158,7 +158,7 @@ class Predictor():
         return labels
 
 if __name__ == "__main__":
-    version = 35
+    version = 36
     pred = Predictor(f'./data/chkpts/lightning/chks/version_{version}.ckpt', './data/classes.csv', filt=True)
     # print("start predicting..")
     # nums = [338,340,341]
